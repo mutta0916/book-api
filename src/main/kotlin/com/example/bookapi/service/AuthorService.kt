@@ -1,5 +1,6 @@
 package com.example.bookapi.service
 
+import com.example.bookapi.exception.NotFoundException
 import com.example.bookapi.model.request.AuthorRequest
 import com.example.bookapi.model.response.AuthorResponse
 import com.example.bookapi.repository.AuthorRepository
@@ -16,4 +17,15 @@ class AuthorService(
             requireNotNull(request.name) { "name: null は許可されていません" },
             requireNotNull(request.birthDate) { "birthDate: null は許可されていません" },
         )
+
+    @Transactional
+    fun update(
+        id: Long,
+        request: AuthorRequest,
+    ): AuthorResponse =
+        authorRepository.update(
+            id,
+            requireNotNull(request.name) { "name: null は許可されていません" },
+            requireNotNull(request.birthDate) { "birthDate: null は許可されていません" },
+        ) ?: throw NotFoundException("Author not found: id=$id")
 }

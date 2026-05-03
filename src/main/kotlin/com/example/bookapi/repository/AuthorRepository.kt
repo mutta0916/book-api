@@ -23,4 +23,20 @@ class AuthorRepository(
                 .fetchOne()!!
         return AuthorResponse(record.id!!, record.name!!, record.birthDate!!)
     }
+
+    fun update(
+        id: Long,
+        name: String,
+        birthDate: LocalDate,
+    ): AuthorResponse? {
+        val record =
+            dsl
+                .update(AUTHORS)
+                .set(AUTHORS.NAME, name)
+                .set(AUTHORS.BIRTH_DATE, birthDate)
+                .where(AUTHORS.ID.eq(id))
+                .returning()
+                .fetchOne()
+        return record?.let { AuthorResponse(it.id!!, it.name!!, it.birthDate!!) }
+    }
 }
