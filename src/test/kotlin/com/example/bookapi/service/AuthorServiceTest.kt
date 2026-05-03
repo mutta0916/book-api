@@ -1,9 +1,13 @@
 package com.example.bookapi.service
 
+import com.example.bookapi.enums.PublishStatus
 import com.example.bookapi.exception.NotFoundException
 import com.example.bookapi.model.request.AuthorRequest
 import com.example.bookapi.model.response.AuthorResponse
+import com.example.bookapi.model.response.AuthorSummary
+import com.example.bookapi.model.response.BookResponse
 import com.example.bookapi.repository.AuthorRepository
+import com.example.bookapi.repository.BookRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -18,6 +22,9 @@ import java.time.LocalDate
 class AuthorServiceTest {
     @Mock
     lateinit var authorRepository: AuthorRepository
+
+    @Mock
+    lateinit var bookRepository: BookRepository
 
     @InjectMocks
     lateinit var authorService: AuthorService
@@ -56,6 +63,49 @@ class AuthorServiceTest {
         val exception =
             assertThrows(NotFoundException::class.java) {
                 authorService.update(999L, request)
+            }
+        assertEquals("Author not found: id=999", exception.message)
+    }
+
+    // --- findBooks ---
+
+    @Test
+    fun test_findBooks_success() {
+        val books =
+            listOf(
+                BookResponse(
+                    1L,
+                    "Kotlin 入門",
+                    3000,
+                    PublishStatus.PUBLISHED,
+                    listOf(AuthorSummary(1L, "山田 太郎"), AuthorSummary(2L, "鈴木 花子")),
+                ),
+            )
+        given(authorRepository.existsById(1L)).willReturn(true)
+        given(bookRepository.findByAuthorId(1L)).willReturn(books)
+
+        val result = authorService.findBooks(1L)
+
+        assertEquals(books, result)
+    }
+
+    @Test
+    fun test_findBooks_emptyList_success() {
+        given(authorRepository.existsById(1L)).willReturn(true)
+        given(bookRepository.findByAuthorId(1L)).willReturn(emptyList())
+
+        val result = authorService.findBooks(1L)
+
+        assertEquals(emptyList<BookResponse>(), result)
+    }
+
+    @Test
+    fun test_findBooks_authorNotFound_throwsNotFoundException() {
+        given(authorRepository.existsById(999L)).willReturn(false)
+
+        val exception =
+            assertThrows(NotFoundException::class.java) {
+                authorService.findBooks(999L)
             }
         assertEquals("Author not found: id=999", exception.message)
     }

@@ -49,6 +49,34 @@ class BookRepository(
             .where(BOOKS.ID.eq(id))
             .fetchOne()
 
+    fun findByAuthorId(authorId: Long): List<BookResponse> {
+        val baAll = BOOK_AUTHORS.`as`("ba_all")
+
+        return dsl
+            .select(BOOKS.ID, BOOKS.TITLE, BOOKS.PRICE, BOOKS.PUBLISH_STATUS, AUTHORS.ID, AUTHORS.NAME)
+            .from(BOOK_AUTHORS)
+            .join(BOOKS)
+            .on(BOOK_AUTHORS.BOOK_ID.eq(BOOKS.ID))
+            .join(baAll)
+            .on(BOOKS.ID.eq(baAll.BOOK_ID))
+            .join(AUTHORS)
+            .on(baAll.AUTHOR_ID.eq(AUTHORS.ID))
+            .where(BOOK_AUTHORS.AUTHOR_ID.eq(authorId))
+            .orderBy(BOOKS.ID, AUTHORS.ID)
+            .fetch()
+            .groupBy { it[BOOKS.ID]!! }
+            .map { (bookId, rows) ->
+                val first = rows.first()
+                BookResponse(
+                    id = bookId,
+                    title = first[BOOKS.TITLE]!!,
+                    price = first[BOOKS.PRICE]!!,
+                    publishStatus = first[BOOKS.PUBLISH_STATUS]!!,
+                    authors = rows.map { AuthorSummary(it[AUTHORS.ID]!!, it[AUTHORS.NAME]!!) },
+                )
+            }
+    }
+
     fun update(
         id: Long,
         title: String,
