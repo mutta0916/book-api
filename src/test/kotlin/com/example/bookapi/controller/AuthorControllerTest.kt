@@ -1,16 +1,19 @@
 package com.example.bookapi.controller
 
+import com.example.bookapi.exception.NotFoundException
 import com.example.bookapi.model.response.AuthorResponse
 import com.example.bookapi.service.AuthorService
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -104,6 +107,92 @@ class AuthorControllerTest {
         mockMvc
             .perform(
                 post("/authors")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "山田 太郎"}"""),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").exists())
+    }
+
+    // --- PUT /authors/{id} ---
+
+    @Test
+    fun test_updateAuthor_success() {
+        val response = AuthorResponse(1L, "山田 太郎", LocalDate.of(1980, 1, 15))
+        given(authorService.update(eq(1L), any())).willReturn(response)
+
+        mockMvc
+            .perform(
+                put("/authors/1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "山田 太郎", "birthDate": "1980-01-15"}"""),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.name").value("山田 太郎"))
+            .andExpect(jsonPath("$.birthDate").value("1980-01-15"))
+    }
+
+    @Test
+    fun test_updateAuthor_notFound_returns404() {
+        given(authorService.update(eq(999L), any())).willThrow(NotFoundException("Author not found: id=999"))
+
+        mockMvc
+            .perform(
+                put("/authors/999")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "山田 太郎", "birthDate": "1980-01-15"}"""),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").exists())
+    }
+
+    @Test
+    fun test_updateAuthor_nameEmpty_returns400() {
+        mockMvc
+            .perform(
+                put("/authors/1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "", "birthDate": "1980-01-15"}"""),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").exists())
+    }
+
+    @Test
+    fun test_updateAuthor_nameBlank_returns400() {
+        mockMvc
+            .perform(
+                put("/authors/1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "   ", "birthDate": "1980-01-15"}"""),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").exists())
+    }
+
+    @Test
+    fun test_updateAuthor_nameMissing_returns400() {
+        mockMvc
+            .perform(
+                put("/authors/1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"birthDate": "1980-01-15"}"""),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").exists())
+    }
+
+    @Test
+    fun test_updateAuthor_birthDateFuture_returns400() {
+        mockMvc
+            .perform(
+                put("/authors/1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name": "山田 太郎", "birthDate": "9999-12-31"}"""),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").exists())
+    }
+
+    @Test
+    fun test_updateAuthor_birthDateMissing_returns400() {
+        mockMvc
+            .perform(
+                put("/authors/1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""{"name": "山田 太郎"}"""),
             ).andExpect(status().isBadRequest)
