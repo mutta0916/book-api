@@ -39,4 +39,11 @@ class AuthorRepository(
                 .fetchOne()
         return record?.let { AuthorResponse(it.id!!, it.name!!, it.birthDate!!) }
     }
+
+    fun countByIds(ids: List<Long>): Int =
+        dsl
+            .selectCount()
+            .from(AUTHORS)
+            .where(AUTHORS.ID.`in`(ids))
+            .fetchOne(0, Int::class.java)!!
 }

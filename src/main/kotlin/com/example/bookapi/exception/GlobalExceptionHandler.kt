@@ -13,6 +13,10 @@ class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     fun handleNotFound(e: NotFoundException): Map<String, String> = mapOf("message" to (e.message ?: "Not found"))
 
+    @ExceptionHandler(BusinessException::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun handleBusiness(e: BusinessException): Map<String, String> = mapOf("message" to (e.message ?: "Bad request"))
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun handleValidation(e: MethodArgumentNotValidException): Map<String, String> {
