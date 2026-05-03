@@ -46,4 +46,9 @@ class AuthorRepository(
             .from(AUTHORS)
             .where(AUTHORS.ID.`in`(ids))
             .fetchOne(0, Int::class.java)!!
+
+    fun existsById(id: Long): Boolean =
+        dsl.fetchExists(
+            dsl.selectOne().from(AUTHORS).where(AUTHORS.ID.eq(id)),
+        )
 }

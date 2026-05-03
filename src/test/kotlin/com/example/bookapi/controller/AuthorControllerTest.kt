@@ -1,7 +1,10 @@
 package com.example.bookapi.controller
 
+import com.example.bookapi.enums.PublishStatus
 import com.example.bookapi.exception.NotFoundException
 import com.example.bookapi.model.response.AuthorResponse
+import com.example.bookapi.model.response.AuthorSummary
+import com.example.bookapi.model.response.BookResponse
 import com.example.bookapi.service.AuthorService
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
@@ -12,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -196,6 +200,56 @@ class AuthorControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""{"name": "山田 太郎"}"""),
             ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").exists())
+    }
+
+    // --- GET /authors/{id}/books ---
+
+    @Test
+    fun test_findBooks_success() {
+        val books =
+            listOf(
+                BookResponse(
+                    1L,
+                    "Kotlin 入門",
+                    3000,
+                    PublishStatus.PUBLISHED,
+                    listOf(AuthorSummary(1L, "山田 太郎"), AuthorSummary(2L, "鈴木 花子")),
+                ),
+            )
+        given(authorService.findBooks(eq(1L))).willReturn(books)
+
+        mockMvc
+            .perform(get("/authors/1/books"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].id").value(1))
+            .andExpect(jsonPath("$[0].title").value("Kotlin 入門"))
+            .andExpect(jsonPath("$[0].price").value(3000))
+            .andExpect(jsonPath("$[0].publishStatus").value("PUBLISHED"))
+            .andExpect(jsonPath("$[0].authors[0].id").value(1))
+            .andExpect(jsonPath("$[0].authors[0].name").value("山田 太郎"))
+            .andExpect(jsonPath("$[0].authors[1].id").value(2))
+            .andExpect(jsonPath("$[0].authors[1].name").value("鈴木 花子"))
+    }
+
+    @Test
+    fun test_findBooks_emptyList_returns200() {
+        given(authorService.findBooks(eq(1L))).willReturn(emptyList())
+
+        mockMvc
+            .perform(get("/authors/1/books"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$").isEmpty)
+    }
+
+    @Test
+    fun test_findBooks_authorNotFound_returns404() {
+        given(authorService.findBooks(eq(999L))).willThrow(NotFoundException("Author not found: id=999"))
+
+        mockMvc
+            .perform(get("/authors/999/books"))
+            .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").exists())
     }
 }
